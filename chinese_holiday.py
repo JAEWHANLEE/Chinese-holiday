@@ -17,88 +17,8 @@ from datetime import datetime, timedelta
 import time
 from urllib import parse
 
-HOLIDAY_DATA_PATH = os.path.join(os.getcwd(), 'holiday.json')
 
 
-def get_holiday_data(year, force_refresh=False):
-    """加载节假日数据，没有则去国务院网站解析
-    
-    Keyword Arguments:
-        year {str} -- 四位数字年份
-        force_refresh {bool} -- 是否强制加载 (default: {False})
-    
-    Returns:
-        array -- 节假日数组，每行格式为：(from_date, to_date, need_work)
-                 如： ('2020-1-1', '2020-1-1', False) 表示2020-1-1放假
-                     ('2020-10-1', '2020-10-8', False) 表示2020-10-1到2020-10-8放假
-                     ('2020-1-19', '2020-1-19', True) 表示2020-1-19补班
-    """
-    year = str(year)
-    all_holiday = {}
-    holiday_data = None
-    if os.path.exists(HOLIDAY_DATA_PATH):
-        with open(HOLIDAY_DATA_PATH, 'r', encoding='utf8') as fp:
-            try:
-                all_holiday = json.load(fp)
-            except Exception:
-                all_holiday = {}
-            if type(all_holiday) == dict:
-                holiday_data = all_holiday.get(str(year), None)
-    if holiday_data is None or force_refresh:
-        url = search_notice_url(year)
-        parsed_year, holiday_data = parse_holiday_info(url)
-        if parsed_year != year or len(holiday_data) == 0:
-            raise Exception('Can not parse holiday info from {}.'.format(url))
-        all_holiday[year] = holiday_data
-        with open(HOLIDAY_DATA_PATH, 'w', encoding='utf8') as fp:
-            json.dump(all_holiday, fp, indent=2, ensure_ascii=False)
-    return holiday_data
-
-
-def is_holiday(date_time):
-    """判断日期是否是节假日（包含正常周末和法定节假日）
-    
-    Arguments:
-        date_time {str} -- 日期，格式: yyyy-mm-dd
-    
-    Returns:
-        bool -- 是否为假日
-    """
-    if type(date_time) == str:
-        date_time = datetime.strptime(date_time, '%Y-%m-%d')
-    assert type(date_time) == datetime
-
-    year = date_time.strftime('%Y')
-    holiday_lines = get_holiday_data(year)
-    assert type(holiday_lines) == list and len(holiday_lines) > 0
-    for holiday_line in holiday_lines:
-        from_date, to_date, work = holiday_line
-        from_date = datetime.strptime(from_date, '%Y-%m-%d')
-        to_date = datetime.strptime(to_date, '%Y-%m-%d')
-        if date_time >= from_date and date_time <= to_date:
-            return not work
-    if date_time.weekday() in (5, 6):
-        return True
-    else:
-        return False
-    return True
-
-
-def get_latest_workday(begin=datetime.today()):
-    """获取最近的一个工作日
-    
-    Keyword Arguments:
-        begin {datetime} -- 开始日 (default: {datetime.today()})
-    
-    Returns:
-        datetime -- 最近的一个工作日
-    """
-    start = begin
-    while True:
-        if not is_holiday(start.strftime('%Y-%m-%d')):
-            break
-        start = start - timedelta(days=1)
-    return start
 
 
 def search_notice_url(year):
@@ -223,6 +143,100 @@ def parse_holiday_info(url):
     #print('-'*100)
     #print(year, holiday_data)
     return (year, holiday_data)
+
+
+        
+
+class CN_Hpliday():
+    HOLIDAY_DATA_PATH = os.path.join(os.getcwd(), 'holiday.json')
+    """docstring for CN_Hpliday"""
+    def __init__(self, yyyy_list):
+        super(CN_Hpliday, self).__init__()
+
+        # set hloiday data (json) update
+        for year in yyyy_list:
+            self.get_holiday_data(year)
+        
+    def get_holiday_data(self, year, force_refresh=False):
+        """加载节假日数据，没有则去国务院网站解析
+        
+        Keyword Arguments:
+            year {str} -- 四位数字年份
+            force_refresh {bool} -- 是否强制加载 (default: {False})
+        
+        Returns:
+            array -- 节假日数组，每行格式为：(from_date, to_date, need_work)
+                     如： ('2020-1-1', '2020-1-1', False) 表示2020-1-1放假
+                         ('2020-10-1', '2020-10-8', False) 表示2020-10-1到2020-10-8放假
+                         ('2020-1-19', '2020-1-19', True) 表示2020-1-19补班
+        """
+        year = str(year)
+        all_holiday = {}
+        holiday_data = None
+        if os.path.exists(HOLIDAY_DATA_PATH):
+            with open(HOLIDAY_DATA_PATH, 'r', encoding='utf8') as fp:
+                try:
+                    all_holiday = json.load(fp)
+                except Exception:
+                    all_holiday = {}
+                if type(all_holiday) == dict:
+                    holiday_data = all_holiday.get(str(year), None)
+        if holiday_data is None or force_refresh:
+            url = search_notice_url(year)
+            parsed_year, holiday_data = parse_holiday_info(url)
+            if parsed_year != year or len(holiday_data) == 0:
+                raise Exception('Can not parse holiday info from {}.'.format(url))
+            all_holiday[year] = holiday_data
+            with open(HOLIDAY_DATA_PATH, 'w', encoding='utf8') as fp:
+                json.dump(all_holiday, fp, indent=2, ensure_ascii=False)
+        return holiday_data
+        
+
+
+    def is_holiday(self, date_time):
+        """判断日期是否是节假日（包含正常周末和法定节假日）
+        
+        Arguments:
+            date_time {str} -- 日期，格式: yyyy-mm-dd
+        
+        Returns:
+            bool -- 是否为假日
+        """
+        if type(date_time) == str:
+            date_time = datetime.strptime(date_time, '%Y-%m-%d')
+        assert type(date_time) == datetime
+
+        year = date_time.strftime('%Y')
+        holiday_lines = get_holiday_data(year)
+        assert type(holiday_lines) == list and len(holiday_lines) > 0
+        for holiday_line in holiday_lines:
+            from_date, to_date, work = holiday_line
+            from_date = datetime.strptime(from_date, '%Y-%m-%d')
+            to_date = datetime.strptime(to_date, '%Y-%m-%d')
+            if date_time >= from_date and date_time <= to_date:
+                return not work
+        if date_time.weekday() in (5, 6):
+            return True
+        else:
+            return False
+        return True
+
+
+    def get_latest_workday(self, begin=datetime.today()):
+        """获取最近的一个工作日
+        
+        Keyword Arguments:
+            begin {datetime} -- 开始日 (default: {datetime.today()})
+        
+        Returns:
+            datetime -- 最近的一个工作日
+        """
+        start = begin
+        while True:
+            if not self.is_holiday(start.strftime('%Y-%m-%d')):
+                break
+            start = start - timedelta(days=1)
+        return start
 
 
 
